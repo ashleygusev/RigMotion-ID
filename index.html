@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RigMotion</title>
+<style>
+:root{--bg:#121212;--p1:#1e1e1e;--p2:#252525;--bd:#383838;--tx:#f2f2f2;--t2:#a0a0a0;--dis:#666;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}*{box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+button,input,select{font:inherit;color:var(--tx);background:var(--p2);border:1px solid var(--bd);border-radius:6px;min-height:34px;padding:0 9px}
+button{cursor:pointer;white-space:nowrap}button:hover:not(:disabled){border-color:var(--t2)}
+button.on,button.pri{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+button:disabled,input:disabled{color:var(--dis);cursor:default}
+input[type=number]{width:72px}input[type=range]{padding:0;min-height:28px;width:100%}
+h1,h3{margin:0 0 8px;font-weight:600}h3{font-size:12px;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;margin-top:14px}
+.m{color:var(--t2);font-size:13px}[hidden]{display:none!important}
+#home{height:100%;overflow:auto;padding:20px;max-width:760px;margin:0 auto}
+.card{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;background:var(--p1);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:8px}
+#ed{display:flex;flex-direction:column;height:100%}
+#tb,#tc{display:flex;gap:6px;align-items:center;padding:6px 8px;background:var(--p1);overflow-x:auto;white-space:nowrap}
+#tb{border-bottom:1px solid var(--bd)}#tm{background:var(--p1);border-top:1px solid var(--bd)}#tc{flex-wrap:wrap;white-space:normal}
+#mn{flex:1;display:flex;min-height:0;position:relative}
+#cw{flex:1;position:relative;min-width:0;background:#181818}
+#cv{position:absolute;left:0;top:0;width:100%;height:100%;touch-action:none}
+#zb{position:absolute;left:8px;bottom:8px;display:flex;gap:6px}
+#sd{width:270px;overflow:auto;background:var(--p1);border-left:1px solid var(--bd);padding:10px}
+#pt{display:none}
+.li{padding:7px 9px;border:1px solid var(--bd);border-radius:6px;margin-bottom:4px;cursor:pointer;background:var(--p2)}
+.li.on{background:var(--tx);color:var(--bg)}
+.ar{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0}
+.fr{display:grid;grid-template-columns:62px 72px 1fr;gap:6px;align-items:center;margin:6px 0}
+.as{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}.as img{width:40px;height:40px;object-fit:contain;background:#181818;border-radius:4px}.as input{min-width:0;flex:1}
+#tw{overflow-x:auto;border-top:1px solid var(--bd)}#tl{position:relative;display:flex;gap:6px;padding:8px;width:max-content}.fc{min-width:76px;min-height:44px;font-size:13px}.fc.on{font-weight:600}
+#ts{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:8px 14px;border-radius:8px;opacity:0;pointer-events:none;max-width:90%;z-index:9}
+@media(max-width:720px){#sd{position:absolute;left:0;right:0;bottom:0;width:auto;height:50%;border:0;border-top:1px solid var(--bd);display:none;z-index:2}#sd.open{display:block}#pt{display:inline-block}}
+</style></head><body>
+<section id="home"><h1>RigMotion</h1><p class="m">2D skeletal animation editor. Projects are saved on this device.</p>
+<p><button class="pri" id="nw">New Project</button></p><h3>Recent projects</h3><div id="lst"></div></section>
+<section id="ed" hidden>
+<header id="tb"><button id="hm" aria-label="Back to projects">← Projects</button><input id="pn" size="12" aria-label="Project name"><button id="un" title="Undo (Ctrl+Z)">Undo</button><button id="re" title="Redo (Ctrl+Shift+Z)">Redo</button><button id="sv" title="Save (Ctrl+S)">Save</button><span id="st" class="m"></span><button id="pt" aria-label="Toggle side panel">Panel</button></header>
+<div id="mn"><div id="cw"><canvas id="cv"></canvas><div id="zb"><button id="zo" aria-label="Zoom out">−</button><button id="zi" aria-label="Zoom in">+</button><button id="gd" class="on">Grid</button></div></div><aside id="sd"></aside></div>
+<footer id="tm"><div id="tc"></div><div id="tw"><div id="tl"></div></div></footer></section>
+<div id="ts" role="status"></div><input type="file" id="fi" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+<script>
+const $=s=>document.querySelector(s),uid=()=>Math.random().toString(36).slice(2,10),cl=(v,a,b)=>Math.max(a,Math.min(b,v)),err=e=>e&&e.message||String(e);
+const h=(t,p={},...k)=>{const e=document.createElement(t);for(const n in p){const v=p[n];if(v==null)continue;if(n=='class')e.className=v;else if(n in e||n[0]=='o')e[n]=v;else e.setAttribute(n,v)}e.append(...k);return e};
+let P,blobs={},imgs={},sel=null,ft=0,play=false,loop=true,grid=true,onion='off',H=[],R=[],ver=0,unsaved=0,tmr,tt,dg=0,pt0,pf0,drag=null,V={x:0,y:0,z:1};
+const KP=['x','y','r','sx','sy'],O=()=>P.objs.find(o=>o.id==sel),cf=()=>Math.round(ft),rng=i=>IDBKeyRange.bound(i+'/',i+'/\uffff');
+/* LocalStorageService: projects in store p, image blobs in store b */
+const DBP=new Promise((ok,no)=>{try{const q=indexedDB.open('rigmotion',1);q.onupgradeneeded=()=>{q.result.createObjectStore('p',{keyPath:'id'});q.result.createObjectStore('b',{keyPath:'k'})};q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)}catch(e){no(e)}});
+const db=(m,f)=>DBP.then(d=>new Promise((ok,no)=>{const t=d.transaction(['p','b'],m),q=f(t.objectStore('p'),t.objectStore('b'));t.oncomplete=()=>ok(q&&q.result);t.onerror=t.onabort=()=>no(t.error)}));
+const toast=m=>{const e=$('#ts');e.textContent=m;e.style.opacity=1;clearTimeout(tt);tt=setTimeout(()=>e.style.opacity=0,3500)};
+/* Frame model: P.frames[i].objs is that frame own editable scene. P.objs aliases the selected frame (non-enumerable, never saved); P.dur is the last frame index. No interpolation. */
+const mk=p=>Object.defineProperties(p,{objs:{get(){return this.frames[ft].objs},set(v){this.frames[ft].objs=v},configurable:true},dur:{get(){return this.frames.length-1},configurable:true}});
+const pose=o=>o,setP=(o,v)=>Object.assign(o,v);
+const cloneFrame=f=>({...JSON.parse(JSON.stringify(f)),id:uid()});
+const fpos=(f0,ms,fps,N,lp)=>{let f=f0+ms*fps/1000,end=0;if(f>=N){if(lp&&N>1)f%=N;else{f=N-1;end=1}}return{i:Math.floor(f),end}};
+function addFrame(){stop();mut(()=>{P.frames.splice(ft+1,0,cloneFrame(P.frames[ft]));ft++})}
+function delFrame(){if(P.frames.length<2)return toast('A project needs at least one frame');stop();mut(()=>{P.frames.splice(ft,1);ft=Math.min(ft,P.frames.length-1);if(!O())sel=null})}
+function migrate(d){/* v1 keyframe project to v2 frames: bakes the old interpolation into one stored frame per frame index */
+ const K=d.keys||{},ev=(o,f)=>{const k=K[o.id];if(!k)return o;const fr=Object.keys(k).map(Number).sort((a,b)=>a-b),l=fr[fr.length-1];if(f<=fr[0])return k[fr[0]];if(f>=l)return k[l];let i=0;while(fr[i+1]<=f)i++;const a=k[fr[i]],b=k[fr[i+1]],t=(f-fr[i])/(fr[i+1]-fr[i]),r={};KP.forEach(p=>r[p]=a[p]+(b[p]-a[p])*t);return r};
+ const n=Object.keys(K).length?d.dur+1:1,frames=[];for(let f=0;f<n;f++)frames.push({id:uid(),objs:d.objs.map(o=>({...o,...ev(o,f)}))});
+ return{v:2,id:uid(),name:d.name+' (frames)',w:d.w,h:d.h,fps:d.fps,assets:d.assets,frames}
+}
+/* UndoRedoManager: JSON snapshots of project data (blobs live outside) */
+const snap=()=>JSON.stringify(P),setSt=s=>$('#st').textContent=s;
+function commit(){H.push(snap());if(H.length>60)H.shift();R=[]}
+function touch(){ver++;unsaved=1;setSt('Unsaved changes');clearTimeout(tmr);tmr=setTimeout(save,1500)}
+function mut(fn){commit();fn();touch();side();draw();tl()}
+function hist(a,b){if(!a.length)return;b.push(snap());P=mk(JSON.parse(a.pop()));ft=cl(ft,0,P.dur);if(!O())sel=null;sync();touch();side();draw();tl()}
+async function save(){if(!P)return;const v=ver;setSt('Saving…');
+ try{await db('readwrite',(p,b)=>{p.put({id:P.id,name:P.name,mod:Date.now(),data:JSON.parse(snap())});b.delete(rng(P.id));P.assets.forEach(a=>b.put({k:P.id+'/'+a.id,blob:blobs[a.id]}))});
+  if(v==ver){unsaved=0;setSt('Saved locally')}else setSt('Unsaved changes')}catch(e){setSt('Save failed');toast('Save failed: '+err(e))}}
+/* Home / project browser */
+async function home(){stop();clearTimeout(tmr);P=null;Object.values(imgs).forEach(i=>URL.revokeObjectURL(i.src));imgs={};blobs={};$('#ed').hidden=true;$('#home').hidden=false;
+ let L=[];try{L=await db('readonly',p=>p.getAll())}catch(e){toast('Local storage unavailable: '+err(e))}
+ L.sort((a,b)=>b.mod-a.mod);const el=$('#lst');el.innerHTML='';
+ if(!L.length)el.append(h('p',{class:'m'},'No projects yet. Tap New Project, then import body-part images.'));
+ L.forEach(r=>{const o=h('button',{onclick:()=>openP(r)},'Open'),u=h('button',{onclick:async()=>{try{const n=uid(),bs=await db('readonly',(p,b)=>b.getAll(rng(r.id))),nm=r.name+' copy';
+   await db('readwrite',(p,b)=>{p.put({id:n,name:nm,mod:Date.now(),data:{...r.data,id:n,name:nm}});bs.forEach(x=>b.put({k:n+'/'+x.k.split('/')[1],blob:x.blob}))});home()}catch(e){toast('Duplicate failed: '+err(e))}}},'Duplicate'),
+  x=h('button',{onclick:async()=>{if(x.textContent!='Sure?'){x.textContent='Sure?';setTimeout(()=>x.textContent='Delete',3000);return}
+   try{await db('readwrite',(p,b)=>{p.delete(r.id);b.delete(rng(r.id))});home()}catch(e){toast('Delete failed: '+err(e))}}},'Delete');
+  el.append(h('div',{class:'card'},h('div',{},h('b',{},r.name),h('div',{class:'m'},new Date(r.mod).toLocaleString()+' · Local')),h('span',{class:'ar'},o,u,x)))})}
+async function openP(r){try{const v=r.data&&r.data.v;if(v!==1&&v!==2)throw Error('unsupported project format version');
+ const bs=await db('readonly',(p,b)=>b.getAll(rng(r.id)));P=mk(JSON.parse(JSON.stringify(v==1?migrate(r.data):r.data)));blobs={};imgs={};bs.forEach(x=>blobs[x.k.split('/')[1]]=x.blob);
+ for(const a of P.assets){if(!blobs[a.id])throw Error('missing image data for '+a.name);const im=new Image(),u=URL.createObjectURL(blobs[a.id]);
+  await new Promise((ok,no)=>{im.onload=ok;im.onerror=()=>no(Error('corrupt image '+a.name));im.src=u});imgs[a.id]=im}
+ startEd(0);if(v==1){touch();toast('Old keyframe project converted to frames and saved as a copy. The original is unchanged.')}}catch(e){P=null;toast('Cannot open project: '+err(e))}}
+function startEd(n){clearTimeout(tmr);H=[];R=[];sel=null;ft=0;ver=0;unsaved=0;$('#home').hidden=true;$('#ed').hidden=false;$('#sd').classList.remove('open');
+ sync();fit();setSt(n?'New project (not saved yet)':'Saved locally');pb();side();draw();tl()}
+function sync(){setFps(P.fps,1);$('#pn').value=P.name}
+function fit(){const w=$('#cw');V.z=Math.max(.1,Math.min(w.clientWidth/(P.w+60),w.clientHeight/(P.h+60)));V.x=(w.clientWidth-P.w*V.z)/2;V.y=(w.clientHeight-P.h*V.z)/2}
+/* AssetManager */
+async function imp(files){let n=0;for(const f of files){if(!/^image\/(png|jpeg|webp)$/.test(f.type)&&!/\.(png|jpe?g|webp)$/i.test(f.name)){toast('Unsupported file: '+f.name+'. Use PNG, JPEG or WebP.');continue}
+ const id=uid(),u=URL.createObjectURL(f),im=new Image();
+ try{await new Promise((ok,no)=>{im.onload=ok;im.onerror=()=>no(Error('image could not be decoded'));im.src=u})}catch(e){URL.revokeObjectURL(u);toast('Import failed: '+f.name+' ('+err(e)+')');continue}
+ commit();blobs[id]=f;imgs[id]=im;P.assets.push({id,name:f.name.replace(/\.[^.]+$/,''),w:im.naturalWidth,h:im.naturalHeight});place(id);n++}
+ if(n){touch();side();draw();tl()}}
+function place(id){const a=P.assets.find(x=>x.id==id),s=Math.min(1,P.w*.4/a.w,P.h*.4/a.h),o={id:uid(),a:id,name:a.name,x:P.w/2,y:P.h/2,r:0,sx:s,sy:s};P.objs.push(o);sel=o.id}
+/* CanvasRenderer */
+function draw(){if(!P)return;const c=$('#cv'),w=$('#cw'),d=devicePixelRatio||1,W=Math.round(w.clientWidth*d),Hh=Math.round(w.clientHeight*d);
+ if(c.width!=W||c.height!=Hh){c.width=W;c.height=Hh}const g=c.getContext('2d');g.setTransform(1,0,0,1,0,0);g.fillStyle='#181818';g.fillRect(0,0,W,Hh);
+ g.setTransform(d*V.z,0,0,d*V.z,d*V.x,d*V.y);g.fillStyle='#1e1e1e';g.fillRect(0,0,P.w,P.h);
+ if(grid){g.strokeStyle='#303030';g.lineWidth=1/V.z;g.beginPath();for(let x=0;x<=P.w;x+=80){g.moveTo(x,0);g.lineTo(x,P.h)}for(let y=0;y<=P.h;y+=80){g.moveTo(0,y);g.lineTo(P.w,y)}g.stroke()}
+ g.strokeStyle='#383838';g.lineWidth=2/V.z;g.strokeRect(0,0,P.w,P.h);
+ /* Onion skin: render neighboring frames as translucent ghosts, without selection handles. */
+ const ghost=(idx,alpha)=>{if(idx<0||idx>=P.frames.length)return;g.save();g.globalAlpha=alpha;for(const q of P.frames[idx].objs){const im=imgs[q.a];if(q.hid||!im)continue;g.save();g.translate(q.x,q.y);g.rotate(q.r*Math.PI/180);g.scale(q.sx,q.sy);g.drawImage(im,-im.naturalWidth/2,-im.naturalHeight/2);g.restore()}g.restore()};
+ if(onion==='before'||onion==='both')ghost(ft-1,.24);
+ if(onion==='after'||onion==='both')ghost(ft+1,.24);
+ for(const q of P.objs){const im=imgs[q.a];if(q.hid||!im)continue;const p=pose(q,ft);g.save();g.translate(p.x,p.y);g.rotate(p.r*Math.PI/180);g.scale(p.sx,p.sy);g.drawImage(im,-im.naturalWidth/2,-im.naturalHeight/2);g.restore()}
+ const o=O(),im=o&&imgs[o.a];if(im&&!o.hid){const p=pose(o,ft),r=p.r*Math.PI/180,c1=Math.cos(r),s1=Math.sin(r),hw=im.naturalWidth/2*p.sx,hh=im.naturalHeight/2*p.sy;
+  g.strokeStyle='#f2f2f2';g.lineWidth=2/V.z;g.setLineDash([6/V.z,4/V.z]);g.beginPath();
+  [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([a,b],i)=>{const x=a*hw,y=b*hh,X=p.x+x*c1-y*s1,Y=p.y+x*s1+y*c1;i?g.lineTo(X,Y):g.moveTo(X,Y)});
+  g.closePath();g.stroke();g.setLineDash([]);g.beginPath();g.arc(p.x,p.y,4/V.z,0,7);g.fillStyle='#f2f2f2';g.fill()}}
+function zoomAt(cx,cy,k){const r=$('#cv').getBoundingClientRect(),px=cx-r.left,py=cy-r.top,z=cl(V.z*k,.1,8),q=z/V.z;V.x=px-(px-V.x)*q;V.y=py-(py-V.y)*q;V.z=z;draw()}
+const zc=k=>{const r=$('#cv').getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,k)};
+/* InputController: mouse and touch via pointer events (tap select, drag move, pinch zoom, empty-space pan) */
+const cvs=$('#cv'),pts=new Map(),wp=e=>{const r=cvs.getBoundingClientRect();return{x:(e.clientX-r.left-V.x)/V.z,y:(e.clientY-r.top-V.y)/V.z}};
+function hit(x,y){for(let i=P.objs.length-1;i>=0;i--){const o=P.objs[i],im=imgs[o.a];if(o.hid||o.lk||!im)continue;const p=pose(o,ft),r=p.r*Math.PI/180,c=Math.cos(r),s=Math.sin(r),dx=x-p.x,dy=y-p.y;
+ if(Math.abs((dx*c+dy*s)/p.sx)<=im.naturalWidth/2&&Math.abs((-dx*s+dy*c)/p.sy)<=im.naturalHeight/2)return o}}
+cvs.onpointerdown=e=>{cvs.setPointerCapture(e.pointerId);stop();pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pts.size==2){const[a,b]=[...pts.values()];drag={m:'pinch',d:Math.hypot(a.x-b.x,a.y-b.y)};return}
+ const q=wp(e),o=hit(q.x,q.y);if(o){sel=o.id;const p=pose(o,ft);drag={m:'mv',ox:q.x-p.x,oy:q.y-p.y,c:0}}else{sel=null;drag={m:'pan',x:e.clientX,y:e.clientY}}side();draw();tl()};
+cvs.onpointermove=e=>{if(!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pts.size==2){const[a,b]=[...pts.values()],nd=Math.hypot(a.x-b.x,a.y-b.y);if(drag&&drag.m=='pinch'&&drag.d>0)zoomAt((a.x+b.x)/2,(a.y+b.y)/2,nd/drag.d);drag={m:'pinch',d:nd};return}
+ if(!drag)return;if(drag.m=='pan'){V.x+=e.clientX-drag.x;V.y+=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;draw()}
+ else if(drag.m=='mv'){const o=O();if(!o)return;const q=wp(e);if(!drag.c){commit();drag.c=1}setP(o,{x:q.x-drag.ox,y:q.y-drag.oy});touch();draw();tl()}};
+cvs.onpointerup=cvs.onpointercancel=e=>{pts.delete(e.pointerId);if(drag&&drag.m=='pinch'&&pts.size<2)drag=null;if(!pts.size){if(drag&&drag.m=='mv'&&drag.c)side();drag=null}};
+cvs.onwheel=e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,e.deltaY<0?1.1:.9)};
+$('#cw').ondragover=e=>e.preventDefault();$('#cw').ondrop=e=>{e.preventDefault();imp([...e.dataTransfer.files])};
+new ResizeObserver(()=>draw()).observe($('#cw'));
+/* Side panel: assets, layers, properties */
+function num(l,pr,mn,mx,st,sl){const o=O(),p=pose(o,ft),v=pr=='s'?p.sx:p[pr];let a,b;
+ const ap=x=>{if(!dg){commit();dg=1}x=+x;if(isNaN(x))return;if(pr=='s')x=Math.max(.05,x);setP(o,pr=='s'?{sx:x,sy:x}:{[pr]:x});touch();draw();tl()};
+ a=h('input',{type:'number',min:mn,max:mx,step:st,value:Math.round(v*100)/100,disabled:!!o.lk,'aria-label':l,oninput:e=>{ap(e.target.value);if(b)b.value=e.target.value},onchange:()=>dg=0});
+ b=sl?h('input',{type:'range',min:mn,max:mx,step:st,value:v,disabled:!!o.lk,'aria-label':l+' slider',oninput:e=>{ap(e.target.value);a.value=Math.round(e.target.value*100)/100},onchange:()=>dg=0}):'';
+ return h('label',{class:'fr'},l,a,b)}
+function side(){if(!P)return;const s=$('#sd'),o=O();s.innerHTML='';$('#un').disabled=!H.length;$('#re').disabled=!R.length;
+ s.append(h('h3',{},'Assets'),h('button',{class:'pri',onclick:()=>$('#fi').click()},'Import image'));
+ if(!P.assets.length)s.append(h('p',{class:'m'},'Import PNG, JPEG or WebP images of body parts. Drag and drop also works on desktop.'));
+ P.assets.forEach(a=>{const rm=h('button',{onclick:()=>{if(rm.textContent!='Sure?'){rm.textContent='Sure?';setTimeout(()=>rm.textContent='Remove',3000);return}
+   mut(()=>{P.frames.forEach(f=>f.objs=f.objs.filter(q=>q.a!=a.id));P.assets=P.assets.filter(x=>x!=a);if(!O())sel=null})}},'Remove');
+  s.append(h('div',{class:'as'},h('img',{src:imgs[a.id].src,alt:a.name}),h('input',{value:a.name,'aria-label':'Asset name',onchange:e=>mut(()=>{a.name=e.target.value||a.name})}),h('button',{onclick:()=>mut(()=>place(a.id))},'Place'),rm))});
+ s.append(h('h3',{},'Layers (top is front)'));
+ if(!P.objs.length)s.append(h('p',{class:'m'},'No objects yet. Place an asset on the canvas.'));
+ for(let i=P.objs.length-1;i>=0;i--){const q=P.objs[i];s.append(h('div',{class:'li'+(q.id==sel?' on':''),onclick:()=>{sel=q.id;side();draw();tl()}},q.name+(q.hid?' · hidden':'')+(q.lk?' · locked':'')))}
+ const A=(t,l,f)=>h('button',{title:l,'aria-label':l,disabled:!o,onclick:f},t),mv=d=>()=>mut(()=>{const i=P.objs.indexOf(o),j=i+d;if(j>=0&&j<P.objs.length)[P.objs[i],P.objs[j]]=[P.objs[j],P.objs[i]]});
+ s.append(h('div',{class:'ar'},A('▲','Bring forward',mv(1)),A('▼','Send backward',mv(-1)),A(o&&o.hid?'Show':'Hide','Toggle visibility',()=>mut(()=>o.hid=!o.hid)),A(o&&o.lk?'Unlock':'Lock','Toggle lock',()=>mut(()=>o.lk=!o.lk)),
+  A('Duplicate','Duplicate object',()=>mut(()=>{const n={...o,id:uid(),name:o.name+' copy',x:o.x+30,y:o.y+30};P.objs.push(n);sel=n.id})),
+  A('Delete','Delete object',()=>mut(()=>delObj(o)))));
+ s.append(h('h3',{},'Properties'));
+ if(!o){s.append(h('p',{class:'m'},'Select an object on the canvas or in Layers.'));return}
+ s.append(h('input',{value:o.name,disabled:!!o.lk,'aria-label':'Object name',onchange:e=>mut(()=>o.name=e.target.value||o.name)}),num('X','x',null,null,1),num('Y','y',null,null,1),num('Rotation','r',-180,180,1,1),num('Scale','s',.05,4,.01,1));
+ s.append(h('p',{class:'m'},'Edits apply to this frame only.'))}
+const delObj=o=>{P.objs=P.objs.filter(q=>q!=o);sel=null};
+/* TimelineController: frame strip; playback is time-based and shows the stored frames in order */
+const pb=()=>$('#pl').textContent=play?'Pause':'Play';
+function stop(){ft=Math.round(ft);play=false;pb()}
+function go(f){stop();ft=cl(f,0,P.dur);side();draw();tl()}
+function togglePlay(){if(play){stop();side();return}if(ft>=P.dur)ft=0;play=true;pt0=performance.now();pf0=ft;pb();requestAnimationFrame(tick)}
+function tick(n){if(!play)return;const r=fpos(pf0,n-pt0,P.fps,P.frames.length,loop);ft=r.i;if(r.end){play=false;pb()}draw();tl();if(play)requestAnimationFrame(tick);else side()}
+function setFps(v,q){v=cl(Math.round(v)||24,1,120);if(!q&&P&&P.fps!=v)mut(()=>P.fps=v);$('#fps').value=v;$('#fs').value=[12,24,30].includes(v)?v:''}
+function tl(){if(!P)return;const w=$('#tl'),n=P.frames.length;
+ if(w.children.length!=n){w.innerHTML='';P.frames.forEach((f,i)=>w.append(h('button',{class:'fc',onclick:()=>go(i)},'Frame '+(i+1))))}
+ [...w.children].forEach((c,i)=>{c.classList.toggle('on',i==ft);c.setAttribute('aria-pressed',i==ft)});
+ const a=$('#tw'),c=w.children[ft];if(c){const l=c.offsetLeft,r=l+c.offsetWidth;if(l<a.scrollLeft)a.scrollLeft=l-8;else if(r>a.scrollLeft+a.clientWidth)a.scrollLeft=r-a.clientWidth+8}
+ $('#fr').textContent='Frame '+(ft+1)+' of '+n+' · '+(n/P.fps).toFixed(2)+' s';$('#df').disabled=n<2}
+const T=$('#tc'),bt=(t,l,f,id)=>{const b=h('button',{title:l,'aria-label':l,onclick:f,id});b.textContent=t;T.append(b);return b};
+bt('+ Frame','Add frame after the selected frame (copies it)',addFrame,'af').classList.add('pri');bt('− Frame','Delete the selected frame (tap twice)',function(){if(P.frames.length<2)return toast('A project needs at least one frame');if(this.textContent!='Sure?'){this.textContent='Sure?';setTimeout(()=>this.textContent='− Frame',3000);return}this.textContent='− Frame';delFrame()},'df');bt('⏮','Jump to start',()=>go(0));bt('◀','Previous frame (Left)',()=>go(cf()-1));bt('Play','Play or pause (Space)',togglePlay,'pl');bt('▶','Next frame (Right)',()=>go(cf()+1));bt('⏭','Jump to end',()=>go(P.dur));bt('Stop','Stop and rewind',()=>go(0));
+bt('Loop','Loop playback',function(){loop=!loop;this.classList.toggle('on',loop)}).classList.add('on');
+T.append(h('label',{class:'m',htmlFor:'onion'},'Onion skin '),
+ h('select',{id:'onion','aria-label':'Onion skin frames',onchange:e=>{onion=e.target.value;draw()}},
+  h('option',{value:'off'},'Off'),h('option',{value:'before'},'Before'),h('option',{value:'after'},'After'),h('option',{value:'both'},'Both')),
+ h('select',{id:'fs','aria-label':'FPS preset',onchange:e=>setFps(+e.target.value)},...[12,24,30].map(v=>h('option',{value:v},v+' fps'))),
+ h('input',{id:'fps',type:'number',min:1,max:120,title:'Custom FPS','aria-label':'Custom FPS',onchange:e=>setFps(+e.target.value)}),
+ h('span',{id:'fr',class:'m'}));
+/* ApplicationShell wiring */
+$('#nw').onclick=()=>{ft=0;P=mk({v:2,id:uid(),name:'Untitled',w:1280,h:720,fps:12,assets:[],frames:[{id:uid(),objs:[]}]});blobs={};imgs={};startEd(1)};
+$('#hm').onclick=async()=>{stop();clearTimeout(tmr);if(unsaved)await save();if(unsaved)return toast('Could not save, staying in the editor');home()};
+$('#pn').onchange=e=>{mut(()=>P.name=e.target.value.trim()||'Untitled');e.target.value=P.name};
+$('#un').onclick=()=>hist(H,R);$('#re').onclick=()=>hist(R,H);$('#sv').onclick=save;$('#pt').onclick=()=>$('#sd').classList.toggle('open');
+$('#zo').onclick=()=>zc(.8);$('#zi').onclick=()=>zc(1.25);$('#gd').onclick=function(){grid=!grid;this.classList.toggle('on',grid);draw()};
+$('#fi').onchange=e=>{const f=[...e.target.files];e.target.value='';imp(f)};
+addEventListener('keydown',e=>{if($('#ed').hidden)return;const m=e.ctrlKey||e.metaKey,k=e.key;
+ if(m&&k.toLowerCase()=='s'){e.preventDefault();save();return}if(/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(e.target.tagName))return;
+ if(m&&k.toLowerCase()=='z'){e.preventDefault();e.shiftKey?hist(R,H):hist(H,R)}else if(m&&k.toLowerCase()=='y'){e.preventDefault();hist(R,H)}
+ else if(k==' '){e.preventDefault();togglePlay()}else if(k=='ArrowLeft')go(cf()-1);else if(k=='ArrowRight')go(cf()+1);
+ else if((k=='Delete'||k=='Backspace')&&O()){e.preventDefault();const o=O();mut(()=>delObj(o))}else if(k=='Escape'){sel=null;side();draw();tl()}});
+addEventListener('beforeunload',e=>{if(unsaved){e.preventDefault();e.returnValue=''}});
+home();
+</script>
+</body></html>
