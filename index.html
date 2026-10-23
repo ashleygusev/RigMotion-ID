@@ -107,8 +107,15 @@ function draw(){if(!P)return;const c=$('#cv'),w=$('#cw'),d=devicePixelRatio||1,W
  const ghost=(idx,alpha)=>{if(idx<0||idx>=P.frames.length)return;g.save();g.globalAlpha=alpha;for(const q of P.frames[idx].objs){const im=imgs[q.a];if(q.hid||!im)continue;g.save();g.translate(q.x,q.y);g.rotate(q.r*Math.PI/180);g.scale(q.sx,q.sy);g.drawImage(im,-im.naturalWidth/2,-im.naturalHeight/2);g.restore()}g.restore()};
  if(onion==='before'||onion==='both')ghost(ft-1,.24);
  if(onion==='after'||onion==='both')ghost(ft+1,.24);
- for(const q of P.objs){const im=imgs[q.a];if(q.hid||!im)continue;const p=pose(q,ft);g.save();g.translate(p.x,p.y);g.rotate(p.r*Math.PI/180);g.scale(p.sx,p.sy);g.drawImage(im,-im.naturalWidth/2,-im.naturalHeight/2);g.restore()}
- const o=O(),im=o&&imgs[o.a];if(im&&!o.hid){const p=pose(o,ft),r=p.r*Math.PI/180,c1=Math.cos(r),s1=Math.sin(r),hw=im.naturalWidth/2*p.sx,hh=im.naturalHeight/2*p.sy;
+ /* Playback safety: if a timeline frame is accidentally empty, keep the last
+ populated frame visible rather than making artwork appear to vanish.
+ Stored frame data is unchanged; editing an empty frame still stays empty. */
+ let renderObjs=P.objs;
+ if(play && renderObjs.length===0){
+  for(let i=ft-1;i>=0;i--){if(P.frames[i]&&P.frames[i].objs&&P.frames[i].objs.length){renderObjs=P.frames[i].objs;break}}
+ }
+ for(const q of renderObjs){const im=imgs[q.a];if(q.hid||!im)continue;const p=pose(q,ft);g.save();g.translate(p.x,p.y);g.rotate(p.r*Math.PI/180);g.scale(p.sx,p.sy);g.drawImage(im,-im.naturalWidth/2,-im.naturalHeight/2);g.restore()}
+ const o=O(),im=o&&imgs[o.a];if(im&&!o.hid&&!play){const p=pose(o,ft),r=p.r*Math.PI/180,c1=Math.cos(r),s1=Math.sin(r),hw=im.naturalWidth/2*p.sx,hh=im.naturalHeight/2*p.sy;
   g.strokeStyle='#f2f2f2';g.lineWidth=2/V.z;g.setLineDash([6/V.z,4/V.z]);g.beginPath();
   [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([a,b],i)=>{const x=a*hw,y=b*hh,X=p.x+x*c1-y*s1,Y=p.y+x*s1+y*c1;i?g.lineTo(X,Y):g.moveTo(X,Y)});
   g.closePath();g.stroke();g.setLineDash([]);g.beginPath();g.arc(p.x,p.y,4/V.z,0,7);g.fillStyle='#f2f2f2';g.fill()}}
